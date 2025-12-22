@@ -11,7 +11,7 @@
 	}: { hex: string; rgb: RgbaColor; hsv: HsvaColor; color: Colord } = $props();
 </script>
 
-<div class="dark-color-picker rounded-l-lg border duration-300 hover:scale-105">
+<div class="dark-color-picker">
 	<ColorPicker label="" bind:hex bind:rgb bind:hsv bind:color position="responsive" />
 </div>
 

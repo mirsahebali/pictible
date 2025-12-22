@@ -5,10 +5,12 @@
 	import type { Colord } from 'colord';
 	import { onMount } from 'svelte';
 	import type { RgbaColor, HsvaColor } from 'svelte-awesome-color-picker';
+	import { Eraser, PencilLine } from '@lucide/svelte';
 
 	import { Slider } from '$lib/components/ui/slider/index';
 	import ThemeToggle from '$lib/components/theme-toggle.svelte';
 	import Counter from '$lib/components/counter.svelte';
+	import { PlayerEvents } from './events';
 
 	let rgb = $state({} as RgbaColor);
 	let hsv = $state({} as HsvaColor);
@@ -18,26 +20,36 @@
 	let startY = $state(0);
 
 	let strokeWidth = $state(4);
+	let mouseDown = $state(false);
+
+	let currPlayerEvent = $state(PlayerEvents.Idle);
+	let prevPlayerEvent = $derived<PlayerEvents>(currPlayerEvent);
 
 	const canvasOffset = $state({ x: 0, y: 0 });
 
 	let canvas: HTMLCanvasElement | null = null;
 	let ctx: CanvasRenderingContext2D | null = null;
 
-	let isDrawing = $state(false);
-
 	onMount(() => {
 		if (!canvas) return;
 
+		document.body.onmousedown = function () {
+			mouseDown = true;
+		};
+		document.body.onmouseup = function () {
+			mouseDown = false;
+		};
+
 		ctx = canvas.getContext('2d');
 		canvas.addEventListener('mousedown', (e) => {
-			isDrawing = true;
+			currPlayerEvent = prevPlayerEvent;
 			startX = e.clientX;
 			startY = e.clientY;
 		});
 
 		canvas.addEventListener('mouseup', () => {
-			isDrawing = false;
+			prevPlayerEvent = currPlayerEvent;
+			currPlayerEvent = PlayerEvents.Idle;
 			if (!ctx) return;
 
 			ctx.stroke();
@@ -45,11 +57,15 @@
 		});
 
 		canvas.addEventListener('mouseleave', () => {
-			isDrawing = false;
+			currPlayerEvent = PlayerEvents.Idle;
 		});
 
 		canvas.addEventListener('mouseout', () => {
-			isDrawing = false;
+			currPlayerEvent = PlayerEvents.Idle;
+		});
+
+		canvas.addEventListener('mousemove', (e) => {
+			if (mouseDown) drawOrErase(e);
 		});
 
 		canvas.width = 800;
@@ -67,26 +83,47 @@
 
 		ctx.strokeStyle = hex;
 		ctx.lineWidth = strokeWidth;
+
+		if (currPlayerEvent == PlayerEvents.Drawing || currPlayerEvent == PlayerEvents.Erasing)
+			canvas.style.cursor = 'crosshair';
 	});
 
-	const draw = (
-		e: MouseEvent & {
-			currentTarget: EventTarget & HTMLCanvasElement;
-		}
+	const drawOrErase = (
+		e:
+			| (MouseEvent & {
+					currentTarget: EventTarget & HTMLCanvasElement;
+			  })
+			| MouseEvent
 	) => {
 		if (!ctx) return;
-		if (!isDrawing) return;
-
-		ctx.lineWidth = strokeWidth;
-		ctx.lineCap = 'round';
 
 		const x = e.clientX - canvasOffset.x;
 		const y = e.clientY - canvasOffset.y;
 
+		ctx.lineWidth = strokeWidth;
+		ctx.lineCap = 'round';
+
 		console.log('x: %d, y: %d', x, y);
 
-		ctx.lineTo(x, y);
-		ctx.stroke();
+		if (currPlayerEvent == PlayerEvents.Drawing) {
+			ctx.lineTo(x, y);
+			ctx.stroke();
+		} else if (currPlayerEvent == PlayerEvents.Erasing) {
+			console.log('Erasing?');
+			ctx.clearRect(x, y, strokeWidth + 2, strokeWidth + 2);
+		} else {
+			return;
+		}
+	};
+
+	const setDraw = () => {
+		if (!ctx) return;
+		currPlayerEvent = PlayerEvents.Drawing;
+	};
+
+	const setErase = () => {
+		if (!ctx) return;
+		currPlayerEvent = PlayerEvents.Erasing;
 	};
 </script>
 
@@ -96,10 +133,16 @@
 
 		<section class="container flex flex-col items-center gap-10">
 			<div id="toolbar" class="flex items-center gap-2">
-				<h2 class="text-xl"></h2>
-
 				<ButtonGroup.Root aria-label="control" orientation="horizontal" class="h-fit">
-					<ColorPicker bind:rgb bind:hsv bind:color bind:hex />
+					<Button variant="outline">
+						<ColorPicker bind:rgb bind:hsv bind:color bind:hex />
+					</Button>
+					<Button variant="outline" class="text-xl" onclick={setDraw}>
+						<PencilLine />
+					</Button>
+					<Button variant="outline" class="text-xl" onclick={setErase}>
+						<Eraser />
+					</Button>
 
 					<Button
 						variant="outline"
@@ -107,7 +150,6 @@
 							if (!ctx) return;
 							if (!canvas) return;
 
-							ctx.fillStyle = '#ffffff';
 							ctx.clearRect(0, 0, canvas.width, canvas.height);
 						}}>Clear</Button
 					>
@@ -118,9 +160,8 @@
 				<ThemeToggle />
 			</div>
 
-			<div class="bg-white">
-				<canvas bind:this={canvas} id="drawing-board" class="border border-black" onmousemove={draw}
-				></canvas>
+			<div class="border border-primary bg-white">
+				<canvas bind:this={canvas}></canvas>
 			</div>
 		</section>
 	</div>

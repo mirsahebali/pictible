@@ -1,168 +1,157 @@
 <script lang="ts">
-	import ColorPicker from '$lib/components/color-picker.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import * as ButtonGroup from '$lib/components/ui/button-group';
-	import type { Colord } from 'colord';
-	import { onMount } from 'svelte';
-	import type { RgbaColor, HsvaColor } from 'svelte-awesome-color-picker';
-	import { Eraser, PencilLine } from '@lucide/svelte';
+	import { defaults, superForm } from 'sveltekit-superforms';
+	import { valibot } from 'sveltekit-superforms/adapters';
+	import * as v from 'valibot';
+	import { toast } from 'svelte-sonner';
+	import * as Form from '$lib/components/ui/form';
+	import * as Card from '$lib/components/ui/card';
+	import { Separator } from '$lib/components/ui/separator';
+	import { Input } from '$lib/components/ui/input';
 
-	import { Slider } from '$lib/components/ui/slider/index';
-	import ThemeToggle from '$lib/components/theme-toggle.svelte';
-	import Counter from '$lib/components/counter.svelte';
-	import { PlayerEvents } from './events';
+	import { to } from '$lib/utils';
+	import {
+		CreateRoomSchema,
+		JoinRoomSchema,
+		JSONServerResponseSchema,
+		type JoinRoomData
+	} from '$lib/schema';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
-	let rgb = $state({} as RgbaColor);
-	let hsv = $state({} as HsvaColor);
-	let color = $state({} as Colord);
-	let hex = $state('#000000');
-	let startX = $state(0);
-	let startY = $state(0);
+	const createRoomForm = superForm(defaults(valibot(CreateRoomSchema)), {
+		validators: valibot(CreateRoomSchema),
+		SPA: true,
+		async onUpdate({ form: f }) {
+			if (f.valid) {
+				let res: Response | null;
+				try {
+					res = await fetch(to('/api/create'), { method: 'POST', body: JSON.stringify(f.data) });
 
-	let strokeWidth = $state(4);
-	let mouseDown = $state(false);
+					const result = v.safeParse(JSONServerResponseSchema, await res.json());
 
-	let currPlayerEvent = $state(PlayerEvents.Idle);
-	let prevPlayerEvent = $derived<PlayerEvents>(currPlayerEvent);
+					if (!result.success) {
+						toast.error('Invalid data recieved');
+						console.error(result.issues);
+						console.log(result.output);
+						return;
+					}
+					const data = result.output.data;
+					if (!data) return;
 
-	const canvasOffset = $state({ x: 0, y: 0 });
+					const move_to = `/room/[room_code]`;
 
-	let canvas: HTMLCanvasElement | null = null;
-	let ctx: CanvasRenderingContext2D | null = null;
+					localStorage.setItem('pictible-username', (data as JoinRoomData).username);
+					localStorage.setItem('pictible-room_code', (data as JoinRoomData).room_code);
 
-	onMount(() => {
-		if (!canvas) return;
-
-		document.body.onmousedown = function () {
-			mouseDown = true;
-		};
-		document.body.onmouseup = function () {
-			mouseDown = false;
-		};
-
-		ctx = canvas.getContext('2d');
-		canvas.addEventListener('mousedown', (e) => {
-			currPlayerEvent = prevPlayerEvent;
-			startX = e.clientX;
-			startY = e.clientY;
-		});
-
-		canvas.addEventListener('mouseup', () => {
-			prevPlayerEvent = currPlayerEvent;
-			currPlayerEvent = PlayerEvents.Idle;
-			if (!ctx) return;
-
-			ctx.stroke();
-			ctx.beginPath();
-		});
-
-		canvas.addEventListener('mouseleave', () => {
-			currPlayerEvent = PlayerEvents.Idle;
-		});
-
-		canvas.addEventListener('mouseout', () => {
-			currPlayerEvent = PlayerEvents.Idle;
-		});
-
-		canvas.addEventListener('mousemove', (e) => {
-			if (mouseDown) drawOrErase(e);
-		});
-
-		canvas.width = 800;
-		canvas.height = 400;
-
-		canvasOffset.x = canvas.offsetLeft;
-		canvasOffset.y = canvas.offsetTop;
-
-		if (!ctx) return;
-	});
-
-	$effect(() => {
-		if (!ctx) return;
-		if (!canvas) return;
-
-		ctx.strokeStyle = hex;
-		ctx.lineWidth = strokeWidth;
-
-		if (currPlayerEvent == PlayerEvents.Drawing || currPlayerEvent == PlayerEvents.Erasing)
-			canvas.style.cursor = 'crosshair';
-	});
-
-	const drawOrErase = (
-		e:
-			| (MouseEvent & {
-					currentTarget: EventTarget & HTMLCanvasElement;
-			  })
-			| MouseEvent
-	) => {
-		if (!ctx) return;
-
-		const x = e.clientX - canvasOffset.x;
-		const y = e.clientY - canvasOffset.y;
-
-		ctx.lineWidth = strokeWidth;
-		ctx.lineCap = 'round';
-
-		console.log('x: %d, y: %d', x, y);
-
-		if (currPlayerEvent == PlayerEvents.Drawing) {
-			ctx.lineTo(x, y);
-			ctx.stroke();
-		} else if (currPlayerEvent == PlayerEvents.Erasing) {
-			console.log('Erasing?');
-			ctx.clearRect(x, y, strokeWidth + 2, strokeWidth + 2);
-		} else {
-			return;
+					await goto(
+						resolve(move_to, {
+							room_code: (data as JoinRoomData).room_code
+						})
+					);
+				} catch (error) {
+					toast.error('error occoured');
+					console.error(error);
+				}
+			} else {
+				// report invalid
+				toast.error('Invalid Form');
+			}
 		}
-	};
+	});
 
-	const setDraw = () => {
-		if (!ctx) return;
-		currPlayerEvent = PlayerEvents.Drawing;
-	};
+	const { form: createRoomData, enhance: createRoomEnhance } = createRoomForm;
 
-	const setErase = () => {
-		if (!ctx) return;
-		currPlayerEvent = PlayerEvents.Erasing;
-	};
+	const joinRoomForm = superForm(defaults(valibot(JoinRoomSchema)), {
+		validators: valibot(JoinRoomSchema),
+		SPA: true,
+		async onUpdate({ form: f }) {
+			if (f.valid) {
+				let res: Response | null;
+				try {
+					res = await fetch(to('/api/join'), { method: 'POST', body: JSON.stringify(f.data) });
+
+					const result = await v.safeParseAsync(JSONServerResponseSchema, await res.json());
+
+					if (!result.success) {
+						toast.error('Invalid data recieved');
+						console.error(result.issues);
+						console.log(result.output);
+						return;
+					}
+
+					const move_to = `/room/[room_code]`;
+
+					localStorage.setItem('pictible-username', f.data.username);
+					localStorage.setItem('pictible-room_code', f.data.room_code);
+
+					await goto(
+						resolve(move_to, {
+							room_code: f.data.room_code
+						})
+					);
+				} catch (error) {
+					toast.error('error occoured');
+					console.error(error);
+				}
+			} else {
+				// report invalid
+				toast.error('Invalid Form');
+			}
+		}
+	});
+
+	const { form: joinRoomData, enhance: joinRoomEnhance } = joinRoomForm;
 </script>
 
-<main class="flex items-center justify-center">
-	<div>
-		<h1 class="my-10 text-center text-4xl font-bold">Pictible</h1>
+<Card.Root class="">
+	<Card.Content class="my-5 flex w-[80vw] flex-col items-center justify-center md:w-[50vw]">
+		<form method="POST" use:createRoomEnhance>
+			<Form.Field form={createRoomForm} name="username">
+				<Form.Control>
+					{#snippet children({ props })}
+						<Form.Label>Player Name</Form.Label>
+						<Input {...props} bind:value={$createRoomData.username} />
+					{/snippet}
+				</Form.Control>
+				<Form.Description>This is your public display name.</Form.Description>
+				<Form.FieldErrors />
+			</Form.Field>
+			<Form.Button>Create Room</Form.Button>
+		</form>
 
-		<section class="container flex flex-col items-center gap-10">
-			<div id="toolbar" class="flex items-center gap-2">
-				<ButtonGroup.Root aria-label="control" orientation="horizontal" class="h-fit">
-					<Button variant="outline">
-						<ColorPicker bind:rgb bind:hsv bind:color bind:hex />
-					</Button>
-					<Button variant="outline" class="text-xl" onclick={setDraw}>
-						<PencilLine />
-					</Button>
-					<Button variant="outline" class="text-xl" onclick={setErase}>
-						<Eraser />
-					</Button>
+		<div class="flex items-center justify-center gap-4">
+			<Separator />
+			<span> OR</span>
+			<Separator />
+		</div>
 
-					<Button
-						variant="outline"
-						onclick={() => {
-							if (!ctx) return;
-							if (!canvas) return;
+		<form method="POST" use:joinRoomEnhance>
+			<Form.Field form={joinRoomForm} name="username">
+				<Form.Control>
+					{#snippet children({ props })}
+						<Form.Label>Player Name</Form.Label>
+						<Input {...props} bind:value={$joinRoomData.username} />
+					{/snippet}
+				</Form.Control>
+				<Form.Description>This is your public display name.</Form.Description>
+				<Form.FieldErrors />
+			</Form.Field>
 
-							ctx.clearRect(0, 0, canvas.width, canvas.height);
-						}}>Clear</Button
-					>
-				</ButtonGroup.Root>
-
-				<Slider type="single" bind:value={strokeWidth} class="w-50" max={100} min={2} step={2} />
-				<Counter bind:count={strokeWidth} />
-				<ThemeToggle />
-			</div>
-
-			<div class="border border-primary bg-white">
-				<canvas bind:this={canvas}></canvas>
-			</div>
-		</section>
-	</div>
-</main>
+			<Form.Field form={joinRoomForm} name="room_code">
+				<Form.Control>
+					{#snippet children({ props })}
+						<Form.Label>Room Code</Form.Label>
+						<Input
+							{...props}
+							type="text"
+							bind:value={$joinRoomData.room_code}
+							placeholder="Room Code"
+						/>
+					{/snippet}
+				</Form.Control>
+				<Form.FieldErrors />
+			</Form.Field>
+			<Form.Button>Join Room</Form.Button>
+		</form>
+	</Card.Content>
+</Card.Root>

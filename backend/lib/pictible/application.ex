@@ -7,8 +7,11 @@ defmodule Pictible.Application do
 
   @impl true
   def start(_type, _args) do
+
     children = [
-      {Bandit, plug: Pictible.Router, scheme: :http, port: 4069}
+      {Bandit, plug: Pictible.Router, scheme: :http, port: 4069},
+      Pictible.Repo,
+      {Registry, keys: :duplicate, name: Pictible.WSRegistry},
     ]
 
     opts = [strategy: :one_for_one, name: Pictible.Supervisor]

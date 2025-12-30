@@ -22,8 +22,11 @@ defmodule Pictible.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:ecto_sql, "~> 3.0"},
+      {:ecto_sqlite3, "~> 0.22.0"},
       {:bandit, "~> 1.0"},
       {:websock_adapter, "~> 0.5.9"},
+      {:jason, "~> 1.4.4"}
     ]
   end
 end

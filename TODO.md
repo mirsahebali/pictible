@@ -1,0 +1,6 @@
+- [ ] create player agent
+    - [ ] add functions to add, remove and get players  
+- [ ] create room agent
+    - [ ] add functions to add, remove and get rooms
+- [ ] create individual isolated Web socket connections for each player room
+- [ ] send and recieve serialized data between different connected client

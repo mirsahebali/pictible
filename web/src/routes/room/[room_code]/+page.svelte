@@ -13,7 +13,7 @@
 	import { Slider } from '$lib/components/ui/slider/index';
 	import ThemeToggle from '$lib/components/theme-toggle.svelte';
 	import Counter from '$lib/components/counter.svelte';
-	import { PlayerEvents, type EventData } from '$lib/events';
+	import { EventQueue, PlayerEvents, type EventData } from '$lib/events';
 	import { toWS } from '$lib/utils';
 
 	import type { PageProps } from './$types';
@@ -23,6 +23,8 @@
 	let hsv = $state({} as HsvaColor);
 	let color = $state({} as Colord);
 	let hex = $state('#000000');
+
+	let playerData = $state({ username: '', room_code: '' });
 	let startX = $state(0);
 	let startY = $state(0);
 
@@ -30,6 +32,7 @@
 
 	let strokeWidth = $state(4);
 	let mouseDown = $state(false);
+	let eventQueue = $state(new EventQueue());
 
 	let currPlayerEvent = $state(PlayerEvents.Idle);
 	let prevPlayerEvent = $derived<PlayerEvents>(currPlayerEvent);
@@ -112,9 +115,12 @@
 			socket = new WebSocket(toWS('/room-ws/' + data.room_code));
 		}
 
-		socket.addEventListener('open', (ev) => {
-			toast.info('Connected To room');
+		socket.addEventListener('open', (_ev) => {
+			toast.info('Connected');
 		});
+
+		playerData.username = localStorage.getItem('pictible-username') || '';
+		playerData.room_code = localStorage.getItem('pictible-room_code') || '';
 
 		socket.addEventListener('message', (message) => {
 			const data: string = message.data;
@@ -231,7 +237,20 @@
 		<ThemeToggle />
 	</div>
 
+	<div>
+		<div>Username: <br /> {playerData.username}</div>
+	</div>
 	<div class="border border-primary bg-white">
 		<canvas bind:this={canvas}></canvas>
+	</div>
+
+	<div>
+		<div>Room Code: <span>{playerData.room_code}</span></div>
+
+		<div>
+			Invite Link: <Button variant="link" href={window.location.href}>
+				{window.location.href}</Button
+			>
+		</div>
 	</div>
 </section>

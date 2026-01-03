@@ -1,4 +1,4 @@
-defmodule Pictible.SignalingWS do
+defmodule Pictible.EventSocket do
   require Logger
 
   def init(%{room_code: room_code, curr_player: "", drawing_state: :idle} = state) do

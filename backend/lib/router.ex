@@ -25,7 +25,7 @@ defmodule Pictible.Router do
   get "/room-ws/:room_code" do
     player_id = ""
     conn 
-    |> WebSockAdapter.upgrade(Pictible.SignalingWS, %{room_code: room_code, curr_player: player_id, drawing_state: :idle}, timeout: 600_000)
+    |> WebSockAdapter.upgrade(Pictible.EventSocket, %{room_code: room_code, curr_player: player_id, drawing_state: :idle}, timeout: 600_000)
   end
 
   match _ do 

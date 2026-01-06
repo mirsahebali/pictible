@@ -6,10 +6,9 @@ export enum PlayerEvents {
 }
 
 export type DrawingData = {
-	x: number;
-	y: number;
+	pos: Vec2;
 	color: string;
-	strokeWidth: number;
+	stroke_width: number;
 };
 
 export type ErasingData = Omit<DrawingData, 'color'>;
@@ -21,22 +20,26 @@ export type PlayerData = {
 
 export enum EventTypes {
 	// Lobby Events
-	PlayerJoined,
-	PlayerLeft,
-	PlayerInvited,
-	PlayerCurrentSelection,
+	PlayerJoined = 0,
+	PlayerLeft = 1,
+	PlayerInvited = 2,
+	PlayerCurrentSelection = 3,
 
 	// Canvas events
-	PlayerDrawing,
-	PlayerErasing,
-	PlayerCleared,
+	PlayerDrawing = 4,
+	PlayerErasing = 5,
+	PlayerCleared = 6,
+	PlayerIdle = 7,
 
 	// Word Events
-	PlayerWordSelection,
-	PlayersGuessing,
+	PlayerWordSelection = 8,
+	PlayerGuessed = 9,
 
 	// Nil
-	NilEvent
+	NilEvent = 10,
+
+	// INFO: this event is sent to every client from server in every few seconds and if the client doesn't responds, we evict the client from db and room
+	CheckConnEvent = 11
 }
 
 type EventData = DrawingData | ErasingData | PlayerData | Omit<PlayerData, 'room_code'>;
@@ -65,7 +68,20 @@ export class EventQueue implements IEventQueue {
 
 	enqueue = (event: EventTypes, data: EventData): number => this.eventQueue.push([event, data]);
 
-	dequeue = (): QueueData | null => this.eventQueue.pop() || null;
+	dequeue = (): QueueData | null => this.eventQueue.shift() || null;
+
+	dequeue_n = (length: number): QueueData[] => {
+		const dequeue_data = [];
+		if (length > this.length) {
+			console.warn('Requested dequeue data is less than total data elements');
+			length = this.length;
+		}
+		for (let index = 0; index < length; index++) {
+			dequeue_data.push(this.dequeue());
+		}
+
+		return dequeue_data;
+	};
 
 	peek = (): QueueData | null => this.eventQueue[this.eventQueue.length - 1];
 
@@ -75,3 +91,10 @@ export class EventQueue implements IEventQueue {
 export const mapFunction = <T>(queueData: QueueData, mapFunc: (data: EventData) => T) =>
 	mapFunc(queueData[1]);
 console.log(JSON.stringify(EventTypes.NilEvent));
+
+export enum CanvasModes {
+	Drawing = 'draw',
+	Erasing = 'erase',
+	Clear = 'clear',
+	Idle = 'idle'
+}

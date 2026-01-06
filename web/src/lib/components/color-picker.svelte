@@ -5,9 +5,9 @@
 
 	let {
 		hex = $bindable(),
-		rgb = $bindable(),
-		hsv = $bindable(),
-		color = $bindable()
+		rgb = $bindable(''),
+		hsv = $bindable(''),
+		color = $bindable('')
 	}: { hex: string; rgb: RgbaColor; hsv: HsvaColor; color: Colord } = $props();
 </script>
 

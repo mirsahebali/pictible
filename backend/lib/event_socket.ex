@@ -7,11 +7,12 @@ defmodule Pictible.EventSocket do
   end
 
   def handle_in({data, [opcode: :text]}, state) do
-    data = IO.inspect(data, label: "Data IN")
+    IO.inspect(Jason.decode!(data), label: "Data in ")
 
     Registry.dispatch(Pictible.WSRegistry, state[:room_code],  fn entries -> 
       for {pid, _meta} <- entries do
         if pid != self() do
+          
           send(pid, {:broadcast, data})
         end
       end
@@ -24,7 +25,8 @@ defmodule Pictible.EventSocket do
   end
 
   def terminate(any_reason, state) do
-    Logger.info(any_reason)
+    IO.inspect(any_reason, label: "Reason")
+    IO.inspect(state, label: "State")
     {:ok, state}
   end
   

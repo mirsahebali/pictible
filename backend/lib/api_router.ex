@@ -16,6 +16,11 @@ defmodule Pictible.ApiRouter do
     send_resp(conn, 200, "API is up\n")
   end
 
+
+  get "/room/:room_code" do
+    send_json_resp_data(conn, 200, "room-get", false, %{})
+  end
+
   post "/join" do
     with {:ok, body, conn} <- read_body(conn, length: 1_0000),
       :ok <- validate_body(conn),
@@ -38,7 +43,6 @@ defmodule Pictible.ApiRouter do
         Logger.alert("Empty data retreieved")
         send_json_resp_data(conn, 404, "Error 404")
     end
-
   end
 
   post "/create" do

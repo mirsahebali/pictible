@@ -1,6 +1,6 @@
 <script lang="ts">
 	import './layout.css';
-	import favicon from '$lib/assets/favicon.svg';
+	import favicon from '$lib/assets/favicon.png';
 	import { ModeWatcher } from 'mode-watcher';
 	import { Toaster } from 'svelte-sonner';
 
@@ -16,7 +16,7 @@
 
 <main class="w-full">
 	<div class="flex flex-col items-center justify-center">
-		<h1 class="my-10 text-center text-4xl font-bold">Pictible</h1>
+		<h1 class="my-4 text-center text-4xl font-bold">Pictible</h1>
 		{@render children()}
 	</div>
 </main>

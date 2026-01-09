@@ -1,20 +1,39 @@
 defmodule Pictible.Models.Room do
 
-  @type state :: :drawing | :erasing | :cleared | :idle
-
   use Ecto.Schema
+
+  alias Pictible.Models.Player
+  import Ecto.Changeset
 
   schema "rooms" do
     field :room_code, :string
 
-    has_many :players, Pictible.Models.Player
-
+    has_many :players, Player
     timestamps()
   end
 
   def changeset(room, params \\ %{})do
     room 
-    |> Ecto.Changeset.cast(params, [:room_code])
-    |> Ecto.Changeset.validate_required([:room_code])
+    |> cast(params, [:room_code])
+    |> validate_required([:room_code])
+  end
+
+  @spec to_map(map()) :: map()
+  def to_map(room) do
+    encoded_map = %{
+      id: room.id,
+      room_code: room.room_code,
+      inserted_at: room.inserted_at,
+      updated_at: room.updated_at,
+    }
+
+    if room.players != nil do
+      players = Enum.map(room.players, fn player -> 
+        Player.to_map(player)
+      end)
+      Map.put(encoded_map, :players, players)
+    else 
+      encoded_map
+    end
   end
 end

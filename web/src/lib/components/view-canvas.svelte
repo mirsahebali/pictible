@@ -70,4 +70,4 @@
 	});
 </script>
 
-<canvas bind:this={canvas} class="rounded-xl border"></canvas>
+<canvas bind:this={canvas} class="rounded-xl border bg-white"></canvas>

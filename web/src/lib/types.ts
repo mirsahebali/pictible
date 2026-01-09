@@ -11,6 +11,5 @@ type Chat = {
 
 type RoomData = {
 	players: Player[];
-	current_player: string;
 	chat: Chat[];
 };

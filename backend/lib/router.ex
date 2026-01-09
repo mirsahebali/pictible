@@ -22,10 +22,10 @@ defmodule Pictible.Router do
     |> WebSockAdapter.upgrade(Pictible.EchoWS, [], timeout: 600_000)
   end
 
-  get "/room-ws/:room_code" do
+  get "/room-ws/:room_code/:username" do
     player_id = ""
     conn 
-    |> WebSockAdapter.upgrade(Pictible.EventSocket, %{room_code: room_code, curr_player: player_id, drawing_state: :idle}, timeout: 600_000)
+    |> WebSockAdapter.upgrade(Pictible.EventSocket, %{room_code: room_code, curr_player: player_id, drawing_state: :idle, username: username}, timeout: 6000_000)
   end
 
   match _ do 

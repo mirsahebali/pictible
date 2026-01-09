@@ -7,7 +7,6 @@ defmodule Pictible.Utils do
   end
 
   def random_hex(bytes \\ 16) do
-
     bytes
     |> :crypto.strong_rand_bytes()
     |> Base.encode16(case: :lower)

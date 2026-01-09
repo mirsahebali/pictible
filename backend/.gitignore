@@ -22,4 +22,9 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 pictible-*.tar
 
+pictible-*.db
+pictible-*.db-shm
+pictible-*.db-wal
+
+
 /priv/static/

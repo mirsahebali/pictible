@@ -4,8 +4,11 @@ defmodule Pictible.ApiRouter do
   use Plug.Router
   
   alias Pictible.Models.Player
+  alias Pictible.Repo
   alias Pictible.Models.Room
   import Pictible.Utils
+
+  import Ecto.Query
 
   plug Plug.Logger
   plug :match
@@ -15,10 +18,47 @@ defmodule Pictible.ApiRouter do
   get "/health" do 
     send_resp(conn, 200, "API is up\n")
   end
-
+  
+  get "/set/player/:room_code" do
+    query = from Room, preload: [:players]
+    result = Repo.get_by(query, room_code: room_code)
+    active_idx = get_active_player_index(result.players)
+    if not is_nil(active_idx) do
+      result.players 
+        |> Enum.with_index() 
+        |> Enum.map(fn {player, index} -> 
+            if index == active_idx do
+              Player.changeset(player, %{active: false}) 
+              |> Repo.update()
+            end
+            
+            if index == active_idx + 1 do
+              Player.changeset(player, %{active: true})
+              |> Repo.update()
+            end
+          end) |> IO.inspect(label: "Update current player result")
+    else
+      List.first(result.players) 
+      |> Player.changeset(%{active: true}) 
+      |> Repo.update()
+    end
+    send_json_resp_data(conn, 200, "updated-player", false)
+  end
 
   get "/room/:room_code" do
-    send_json_resp_data(conn, 200, "room-get", false, %{})
+    query = from Room, preload: [:players]
+    with result <- Repo.get_by(query, room_code: room_code), 
+      false <- is_nil(result),
+      mapped_data <- Room.to_map(result),
+      {:ok, json_body} <- Jason.encode(mapped_data)
+      do 
+        send_json_resp_data(conn, 200, "room-get", false, json_body)
+    else
+      true -> send_json_resp_data(conn, 404, "room-not-found", true, nil)
+    {:error, reason} -> 
+      Logger.alert(reason)
+      send_json_resp_data(conn, 402, "", true, nil)
+    end
   end
 
   post "/join" do
@@ -28,9 +68,11 @@ defmodule Pictible.ApiRouter do
       true <- validate_json(json_body, [:username, :room_code]),
         IO.inspect(json_body),
       existing_room when not is_nil(existing_room) <- Pictible.Repo.get_by(Room, room_code: json_body["room_code"]),
-      {:ok, _} <- (existing_room |> Ecto.build_assoc(:players, username: json_body["username"]) |> Pictible.Repo.insert())
+      {:ok, _} <- (existing_room 
+        |> Ecto.build_assoc(:players, username: json_body["username"], active: false) 
+        |> Pictible.Repo.insert())
     do
-      send_json_resp_data(conn, 200, "User Joined The Room")
+      send_json_resp_data(conn, 200, "User Joined The Room", false)
     else
       {:error, reason} -> 
         Logger.alert("Invalid data was passed")
@@ -125,4 +167,9 @@ defmodule Pictible.ApiRouter do
   defp valid_length(length), do: length <= 100 
 
   defp check_text_plain_content(value), do: String.contains?(value, "text/plain")  
+
+  # TODO: if we get nil here, set any player to active
+  defp get_active_player_index(players) do
+    Enum.find_index(players, fn player -> player.active end)
+  end
 end

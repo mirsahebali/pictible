@@ -1,8 +1,7 @@
 defmodule Pictible.Models.Player do
 
-  @type state :: :drawing | :erasing | :cleared | :idle
-
   use Ecto.Schema
+  import Ecto.Changeset
 
   schema "players" do
     field :username, :string
@@ -15,7 +14,21 @@ defmodule Pictible.Models.Player do
 
   def changeset(player, params \\ %{})do
     player 
-    |> Ecto.Changeset.cast(params, [:username, :active])
-    |> Ecto.Changeset.validate_required([:username, :active])
+    |> cast(params, [:username, :active])
+    |> validate_required([:username, :active])
   end
+
+  @spec to_map(map()) :: map()
+  def to_map(player) do
+    encoded_map = %{
+      id: player.id,
+      username: player.username,
+      active: player.active,
+      inserted_at: player.inserted_at,
+      updated_at: player.updated_at
+    }
+
+    encoded_map
+  end
+
 end

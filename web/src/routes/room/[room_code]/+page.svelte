@@ -10,31 +10,41 @@
 	import { fakeChats, fakePlayers } from '$lib/utils';
 	import { SendHorizontal } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { onMount, tick } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { toWS } from '$lib/utils';
 	import { EventTypes, CanvasModes } from '$lib/events';
 	import { safeSocketSend } from '$lib/socket';
 	import { normalizePos } from '$lib/draw';
 	import { toast } from 'svelte-sonner';
+	import { getRoomData } from '$lib/requests';
+	import { drawData } from '$lib/draw.svelte';
 
-	// TODO: add real players
-	let players = $state(fakePlayers(10));
+	let { data } = $props();
+
+	let players = $state(data?.roomData?.players || []);
+
 	// TODO: add real chats
 	let chats = $state(fakeChats(40));
 	// TODO: add real current player eval
-	let isCurrentPlayer = $state(true);
+	let isPlayerActive = $state(true);
 
-	import { drawData } from '$lib/draw.svelte';
+	let roomCode = $state(data.room_code);
 
 	let currentUsername = $state('');
 
 	let socket = $state<WebSocket | null>(null);
-	let { data } = $props();
 
 	onMount(() => {
-		if (!socket) socket = new WebSocket(toWS('/room-ws/' + data.room_code));
-
+		if (data.error) {
+			toast.error('Invalid request');
+			return;
+		}
+		players = data.roomData.players;
 		currentUsername = localStorage.getItem('pictible-username');
+		isPlayerActive = players.find((p) => p.username === currentUsername).active;
+
+		console.log(players);
+		if (!socket) socket = new WebSocket(toWS('/room-ws/' + data.room_code + '/' + currentUsername));
 
 		socket.addEventListener('open', async () => {
 			await socket.send(
@@ -42,14 +52,21 @@
 			);
 		});
 
-		socket.addEventListener('message', (message) => {
-			const { event, data }: { event: EventTypes; data: EventData } = JSON.parse(message.data);
+		socket.addEventListener('message', async (message) => {
+			const { event, data: eventData }: { event: EventTypes; data: EventData } = JSON.parse(
+				message.data
+			);
 
 			switch (event) {
 				case EventTypes.PlayerJoined:
-					toast.info('Player Joined: ' + data.username);
+					toast.info('Player Joined: ' + eventData.username);
+					data.roomData = await getRoomData(roomCode);
+					if (data.roomData) players = data.roomData.players;
 					break;
 				case EventTypes.PlayerLeft:
+					toast.info('Player Left' + eventData);
+					data.roomData = await getRoomData(roomCode);
+					if (data.roomData) players = data.roomData.players;
 					break;
 				case EventTypes.PlayerInvited:
 					break;
@@ -58,10 +75,10 @@
 					break;
 				case EventTypes.PlayerDrawing:
 					{
-						if (isCurrentPlayer) {
+						if (isPlayerActive) {
 							break;
 						}
-						const [recvX, recvY, recvHex, recvStrokeWidth] = data;
+						const [recvX, recvY, recvHex, recvStrokeWidth] = eventData;
 						drawData.x = recvX;
 						drawData.y = recvY;
 						drawData.hex = recvHex;
@@ -72,10 +89,10 @@
 					break;
 				case EventTypes.PlayerErasing:
 					{
-						if (isCurrentPlayer) {
+						if (isPlayerActive) {
 							break;
 						}
-						const [recvX, recvY, recvStrokeWidth] = data;
+						const [recvX, recvY, recvStrokeWidth] = eventData;
 						drawData.x = recvX;
 						drawData.y = recvY;
 						drawData.eraseStrokeWidth = recvStrokeWidth;
@@ -140,6 +157,11 @@
 				break;
 		}
 	});
+
+	onDestroy(() => {
+		if (!socket) return;
+		socket.close(1000, 'abc123');
+	});
 </script>
 
 <div class="gap-2 not-lg:flex-col md:flex" id="main-container">
@@ -148,24 +170,31 @@
 			<Card.Content>
 				<ScrollArea class="h-[20vh] lg:h-[40vh]">
 					<ul>
+						<li class="flex justify-between rounded-xl border px-3">
+							<span> Me:</span> <span> {currentUsername}</span>
+						</li>
 						{#each players as player, index (index)}
-							<li class="my-1">{player.username}</li>
+							<li class={'my-1 ' + player.active ? 'scale-110 underline' : ''}>
+								{player.username}
+							</li>
 
 							<Separator />
 						{/each}
 					</ul>
 				</ScrollArea>
-
-				<div class="flex items-center space-x-2">
-					<Switch id="viewer-mode" bind:checked={isCurrentPlayer} />
-					<Label for="viewer-mode">Viewer Mode</Label>
-				</div>
 			</Card.Content>
 		</Card.Root>
 	</div>
 	<div id="canvas">
-		<div>
-			{#if isCurrentPlayer}
+		<div class={players.length <= 1 ? 'relative cursor-not-allowed border opacity-75' : ''}>
+			{#if players.length <= 1}
+				<div class="absolute h-full w-full border border-white bg-primary-foreground">
+					<div class="pointer-events-none z-10 flex h-full w-full items-center justify-center">
+						Waiting for other players to join....
+					</div>
+				</div>
+			{/if}
+			{#if isPlayerActive}
 				<DrawingCanvas />
 			{:else}
 				<ViewCanvas />

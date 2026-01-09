@@ -114,8 +114,27 @@
 	});
 </script>
 
-<canvas bind:this={canvas} class="rounded-xl border"></canvas>
-<div id="toolbar">
+<canvas bind:this={canvas} class="rounded-xl border bg-white"></canvas>
+<div id="toolbar" class="mt-5 flex items-center justify-between gap-10 rounded-2xl border p-4">
+	<Button
+		onclick={() => {
+			drawData.canvasMode = CanvasModes.Clear;
+		}}
+	>
+		<Trash2 class="size-4" />
+	</Button>
+	{#if canvasSelectMode === CanvasModes.Drawing}
+		<div class="rounded-full border-2">
+			<ColorPicker bind:hex={drawData.hex} />
+		</div>
+		<Slider type="single" bind:value={drawData.drawStrokeWidth} max={100} step={2} />
+	{/if}
+	<br />
+
+	{#if canvasSelectMode === CanvasModes.Erasing}
+		<Slider type="single" bind:value={drawData.eraseStrokeWidth} max={100} step={2} />
+	{/if}
+
 	<ToggleGroup.Root type="single" bind:value={canvasSelectMode}>
 		<ToggleGroup.Item value="draw" aria-label="select draw">
 			<PencilLine class="size-4" />
@@ -124,17 +143,4 @@
 			<Eraser class="size-4" />
 		</ToggleGroup.Item>
 	</ToggleGroup.Root>
-
-	<Button
-		onclick={() => {
-			canvasMode = CanvasModes.Clear;
-		}}
-	>
-		<Trash2 class="size-4" />
-	</Button>
-	<ColorPicker bind:hex={drawData.hex} />
-
-	<Slider type="single" bind:value={drawData.drawStrokeWidth} max={100} step={2} />
-	<br />
-	<Slider type="single" bind:value={drawData.eraseStrokeWidth} max={100} step={2} />
 </div>

@@ -7,15 +7,13 @@ defmodule Pictible.EventConsts do
       @player_joined 0
       @player_left 1
       @player_invited 2
-      @player_current_selection 3
+      @player_switch 3
       @player_drawing 4
       @player_erasing 5
       @player_cleared 6
       @player_idle 7
-      @player_word_selection 8
-      @player_guessed 9
-      @nil_event 10
-      @check_conn_event 11
+      @player_sent_message 8
+      @nil_event 9
     end
   end
 end

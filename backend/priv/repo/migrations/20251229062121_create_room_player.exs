@@ -7,10 +7,11 @@ defmodule Pictible.Repo.Migrations.CreateRoom do
   def change do
     create table(:players) do
       add :username, :string
-      add :active, :boolean
+      add :active, :boolean, default: true
+      add :is_host, :boolean
       add :room_id,
         references(:rooms, on_delete: :nothing),
-        null: true 
+        null: false 
 
       timestamps(type: :utc_datetime)
     end

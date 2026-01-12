@@ -1,16 +1,20 @@
 defmodule Pictible.Router do
   use Plug.Router
 
+  plug Plug.Logger
   plug Plug.Static,
     at: "/",
-    from: :pictible,
-    headers: (if Mix.env() == :dev, do: %{"Access-Control-Allow-Origin" => "*"}, else: nil)
+    from: {:pictible, "priv/static"},
+    only: ~w(_app robots.txt)
 
-  plug Plug.Logger
+  plug Plug.Static,
+    at: "/room",
+    from: {:pictible, "priv/static"},
+    only: ~w(_app robots.txt)
+
   plug :match
   plug :dispatch
 
-  forward "/api", to: Pictible.ApiRouter
 
   get "/ws-test" do
     send_resp(conn, 200, "connect to ws")
@@ -23,15 +27,19 @@ defmodule Pictible.Router do
   end
 
   get "/room-ws/:room_code/:username" do
-    player_id = ""
     conn 
-    |> WebSockAdapter.upgrade(Pictible.EventSocket, %{room_code: room_code, curr_player: player_id, drawing_state: :idle, username: username}, timeout: 6000_000)
+    |> WebSockAdapter.upgrade(Pictible.EventSocket, %{room_code: room_code, drawing_state: :idle, username: username}, timeout: 6000_000)
   end
 
-  match _ do 
-    send_file(conn, 200, Path.join(:code.priv_dir(:pictible), "static/index.html"))
-  end
+  forward "/api", to: Pictible.ApiRouter
 
+  # 👇 SPA fallback MUST be a route
+  get _ do
+    conn
+    |> put_resp_content_type("text/html")
+    |> send_file(
+      200,
+      Path.join(:code.priv_dir(:pictible), "static/index.html")
+    )
+  end
 end
-
-

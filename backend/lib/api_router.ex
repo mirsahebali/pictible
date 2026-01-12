@@ -1,13 +1,16 @@
 defmodule Pictible.ApiRouter do
 
   require Logger
+
   use Plug.Router
   
   alias Pictible.Models.Player
-  alias Pictible.Repo
   alias Pictible.Models.Room
-  import Pictible.Utils
+  alias Pictible.Models.Chat
 
+  alias Pictible.Repo
+
+  import Pictible.Utils
   import Ecto.Query
 
   plug Plug.Logger
@@ -18,7 +21,21 @@ defmodule Pictible.ApiRouter do
   get "/health" do 
     send_resp(conn, 200, "API is up\n")
   end
-  
+
+  get "/chats/:room_code" do
+    query = from r in Room,
+      join: c in Chat,
+      join: p in Player,
+      on: c.room_id == r.id,
+      where: r.room_code == ^room_code,
+      select: %{id: c.id,
+        message: c.message,
+        username: p.username,
+        sent_at: c.sent_at}
+    result = Repo.all(query)
+    send_json_resp_data(conn, 200, "chat-get", false, Jason.encode!(result))
+  end
+
   get "/set/player/:room_code" do
     query = from Room, preload: [:players]
     result = Repo.get_by(query, room_code: room_code)

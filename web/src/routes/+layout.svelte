@@ -23,7 +23,7 @@
 			<ThemeToggle />
 		</h1>
 	</header>
-	<div class="flex flex-col items-center justify-center">
+	<div class="flex w-full flex-col items-center justify-center md:mx-10">
 		{@render children()}
 	</div>
 </main>

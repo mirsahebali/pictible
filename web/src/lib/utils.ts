@@ -13,6 +13,8 @@ export type WithoutChildren<T> = T extends { children?: any } ? Omit<T, 'childre
 export type WithoutChildrenOrChild<T> = WithoutChildren<WithoutChild<T>>;
 export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & { ref?: U | null };
 
+export const isDev = () => import.meta.env.DEV;
+
 export const to = (route: string) => (import.meta.env.DEV ? 'http://localhost:4069' : '') + route;
 
 export const toWS = (route: string) => (import.meta.env.DEV ? 'ws://localhost:4069' : '') + route;

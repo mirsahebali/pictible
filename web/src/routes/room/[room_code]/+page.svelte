@@ -1,3 +1,9 @@
+<script module lang="ts">
+	function sendMessage(socket: WebSocket, username: string, message: string) {
+		safeSocketSend(socket, { event: EventTypes.PlayerSentChat, data: { username, message } });
+	}
+</script>
+
 <script lang="ts">
 	import DrawingCanvas from '$lib/components/drawing-canvas.svelte';
 	import ViewCanvas from '$lib/components/view-canvas.svelte';
@@ -10,7 +16,7 @@
 	import { fakeChats, fakePlayers } from '$lib/utils';
 	import { SendHorizontal } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { toWS } from '$lib/utils';
 	import { EventTypes, CanvasModes } from '$lib/events';
 	import { safeSocketSend } from '$lib/socket';
@@ -18,17 +24,17 @@
 	import { toast } from 'svelte-sonner';
 	import { getRoomData } from '$lib/requests';
 	import { drawData } from '$lib/draw.svelte';
+	import { goto, refreshAll } from '$app/navigation';
 
 	let { data } = $props();
 
 	let players = $state(data?.roomData?.players || []);
 
-	// TODO: add real chats
-	let chats = $state(fakeChats(40));
-	// TODO: add real current player eval
-	let isPlayerActive = $state(true);
+	let chats = $state(data?.roomChatData || []);
+	let isPlayerActive = $state(false);
 
 	let roomCode = $state(data.room_code);
+	let message = $state('');
 
 	let currentUsername = $state('');
 
@@ -37,13 +43,16 @@
 	onMount(() => {
 		if (data.error) {
 			toast.error('Invalid request');
+			localStorage.removeItem('pictible-username');
+			localStorage.removeItem('pictible-room_code');
+			window.location.href = '/';
 			return;
 		}
 		players = data.roomData.players;
 		currentUsername = localStorage.getItem('pictible-username');
 		isPlayerActive = players.find((p) => p.username === currentUsername).active;
 
-		console.log(players);
+		$inspect(players);
 		if (!socket) socket = new WebSocket(toWS('/room-ws/' + data.room_code + '/' + currentUsername));
 
 		socket.addEventListener('open', async () => {
@@ -105,10 +114,17 @@
 				case EventTypes.PlayerIdle:
 					drawData.canvasMode = 'idle';
 					break;
-				case EventTypes.PlayerWordSelection:
-					break;
+				case EventTypes.PlayerSentChat:
+					{
+						const { username, message } = eventData;
 
-				case EventTypes.PlayerGuessed:
+						chats.push({
+							id: parseInt(Math.random() * 100),
+							message,
+							sent_at: new Date(),
+							username: username
+						});
+					}
 					break;
 
 				case EventTypes.NilEvent:
@@ -157,21 +173,22 @@
 				break;
 		}
 	});
-
-	onDestroy(() => {
-		if (!socket) return;
-		socket.close(1000, 'abc123');
-	});
 </script>
 
-<div class="gap-2 not-lg:flex-col md:flex" id="main-container">
+<div
+	class="w-full gap-2 not-md:flex-col md:flex md:items-start md:justify-around"
+	id="main-container"
+>
 	<div id="players">
 		<Card.Root>
 			<Card.Content>
 				<ScrollArea class="h-[20vh] lg:h-[40vh]">
 					<ul>
-						<li class="flex justify-between rounded-xl border px-3">
+						<li class="flex justify-between rounded-md border px-3">
 							<span> Me:</span> <span> {currentUsername}</span>
+						</li>
+						<li class="flex justify-between rounded-md border px-3">
+							<span>Room Code: </span><span>{data.room_code}</span>
 						</li>
 						{#each players as player, index (index)}
 							<li class={'my-1 ' + player.active ? 'scale-110 underline' : ''}>
@@ -194,7 +211,7 @@
 					</div>
 				</div>
 			{/if}
-			{#if isPlayerActive}
+			{#if isPlayerActive && players.length > 1}
 				<DrawingCanvas />
 			{:else}
 				<ViewCanvas />
@@ -222,9 +239,22 @@
 
 			<Card.Footer>
 				<InputGroup.Root>
-					<InputGroup.Input placeholder="type your guess" />
+					<InputGroup.Input placeholder="type your guess" bind:value={message} />
 					<InputGroup.Addon align="inline-end">
-						<InputGroup.Button variant="secondary"><SendHorizontal /></InputGroup.Button>
+						<InputGroup.Button
+							variant="secondary"
+							onclick={() => {
+								sendMessage(socket, currentUsername, message);
+								chats.push({
+									id: parseInt(Math.random() * 100),
+									message,
+									sent_at: new Date(),
+									username: currentUsername
+								});
+								message = '';
+								console.log('sent');
+							}}><SendHorizontal /></InputGroup.Button
+						>
 					</InputGroup.Addon>
 				</InputGroup.Root>
 			</Card.Footer>

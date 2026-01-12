@@ -2,22 +2,30 @@ defmodule Pictible.EventSocket do
   require Logger
 
   use Pictible.EventConsts
+
   alias Pictible.Models.Player
   alias Pictible.Models.Room
 
+  import Pictible.EventHandlers
+
   import Ecto.Query
 
-  def init(%{room_code: room_code, curr_player: "", drawing_state: :idle, username: username} = state) do
+  def init(%{room_code: room_code, drawing_state: :idle, username: username} = state) do
     Registry.register(Pictible.WSRegistry, room_code, %{username: username})
     {:ok, state}
   end
 
   def handle_in({data, [opcode: :text]}, state) do
-    IO.inspect(Jason.decode!(data), label: "Data in ")
+
+    %{"event" => event, "data" => event_data} = Jason.decode!(data)
+
+    {:ok, _result_data} = handle_event(event, event_data)
 
     Registry.dispatch(Pictible.WSRegistry, state[:room_code],  fn entries -> 
       for {pid, _meta} <- entries do
 
+        IO.inspect(event, label: "Event")
+        IO.inspect(event_data, label: "Data")
         if pid != self() do
           send(pid, {:broadcast, data})
         end
@@ -32,7 +40,8 @@ defmodule Pictible.EventSocket do
   end
 
 
-  def terminate(_reason, state) do
+  def terminate(reason, state) do
+    IO.inspect(reason, label: "Terminate reason")
     remove_player(state[:username])
     dispatch_player_left(state[:room_code], state[:username])
     delete_room(state[:room_code])

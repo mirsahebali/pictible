@@ -30,7 +30,9 @@
 
 		ctx = canvas.getContext('2d');
 
-		canvas.width = !isMobile() ? 800 : window.innerWidth - window.innerWidth * 0.2;
+		canvas.width = !isMobile()
+			? window.innerWidth / 2
+			: window.innerWidth - window.innerWidth * 0.2;
 		canvas.height = (canvas.width * 9) / 16;
 		drawData.canvasWidth = canvas.width;
 		drawData.canvasHeight = canvas.height;

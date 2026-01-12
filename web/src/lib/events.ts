@@ -20,26 +20,21 @@ export type PlayerData = {
 
 export enum EventTypes {
 	// Lobby Events
-	PlayerJoined = 0,
-	PlayerLeft = 1,
-	PlayerInvited = 2,
-	PlayerCurrentSelection = 3,
+	PlayerJoined,
+	PlayerLeft,
+	PlayerInvited,
+	PlayerSwitch,
 
 	// Canvas events
-	PlayerDrawing = 4,
-	PlayerErasing = 5,
-	PlayerCleared = 6,
-	PlayerIdle = 7,
+	PlayerDrawing,
+	PlayerErasing,
+	PlayerCleared,
+	PlayerIdle,
 
-	// Word Events
-	PlayerWordSelection = 8,
-	PlayerGuessed = 9,
+	PlayerSentChat,
 
 	// Nil
-	NilEvent = 10,
-
-	// INFO: this event is sent to every client from server in every few seconds and if the client doesn't responds, we evict the client from db and room
-	CheckConnEvent = 11
+	NilEvent
 }
 
 type EventData = DrawingData | ErasingData | PlayerData | Omit<PlayerData, 'room_code'>;

@@ -7,7 +7,8 @@ defmodule Pictible.MixProject do
       version: "0.1.0",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      aliases: aliases()
     ]
   end
 
@@ -16,6 +17,12 @@ defmodule Pictible.MixProject do
     [
       extra_applications: [:logger],
       mod: {Pictible.Application, []}
+    ]
+  end
+
+  defp aliases do
+    [
+      reset_db: [ "ecto.drop", "ecto.create", "ecto.migrate" ]
     ]
   end
 

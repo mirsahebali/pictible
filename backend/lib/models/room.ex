@@ -3,12 +3,14 @@ defmodule Pictible.Models.Room do
   use Ecto.Schema
 
   alias Pictible.Models.Player
+  alias Pictible.Models.Chat
   import Ecto.Changeset
 
   schema "rooms" do
     field :room_code, :string
 
     has_many :players, Player
+    has_many :chats, Chat
     timestamps()
   end
 

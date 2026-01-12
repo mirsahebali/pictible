@@ -8,6 +8,7 @@ defmodule Pictible.Models.Player do
     field :active, :boolean
 
     belongs_to :room, Pictible.Models.Room
+    has_many :chats, Pictible.Models.Chat
 
     timestamps()
   end

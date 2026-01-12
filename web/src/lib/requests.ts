@@ -35,6 +35,16 @@ export const RoomSchema = v.object({
 
 type RoomData = v.InferInput<typeof RoomSchema>;
 
+export const ChatSchema = v.object({
+	id: v.pipe(v.number()),
+	message: v.pipe(v.string()),
+	username: v.pipe(v.string()),
+	sent_at: v.pipe(
+		v.string(),
+		v.transform((input) => new Date(input))
+	)
+});
+
 export const getRoomData = async (roomCode: string): RoomData | null => {
 	let res;
 	try {
@@ -72,4 +82,28 @@ export const getRoomData = async (roomCode: string): RoomData | null => {
 	}
 
 	return roomData.output;
+};
+
+export const getChatData = async (room_code: string) => {
+	const res = await fetch(to('/api/chats/' + room_code));
+
+	const json = await res.json();
+
+	const parsed = v.safeParse(JSONServerResponseSchema, json);
+
+	if (!parsed.success) {
+		toast.error('Error response');
+		console.log(parsed.issues);
+		return null;
+	}
+
+	const data = v.safeParse(v.array(ChatSchema), JSON.parse(parsed.output.data));
+
+	if (!data.success) {
+		toast.error('Invalid chat data');
+		console.log(data.issues);
+		return null;
+	}
+
+	return data.ouptut;
 };

@@ -13,6 +13,7 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import { Switch } from '$lib/components/ui/switch';
 	import { Label } from '$lib/components/ui/label';
+	import { AspectRatio } from '$lib/components/ui/aspect-ratio';
 	import { fakeChats, fakePlayers } from '$lib/utils';
 	import { SendHorizontal } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -25,6 +26,9 @@
 	import { getRoomData } from '$lib/requests';
 	import { drawData } from '$lib/draw.svelte';
 	import { goto, refreshAll } from '$app/navigation';
+	import Players from '$lib/components/players.svelte';
+	import * as ButtonGroup from '$lib/components/ui/button-group';
+	import { Clipboard } from '@lucide/svelte';
 
 	let { data } = $props();
 
@@ -173,91 +177,102 @@
 				break;
 		}
 	});
+
+	function sendMessageHandler() {
+		sendMessage(socket, currentUsername, message);
+		chats.push({
+			id: parseInt(Math.random() * 100),
+			message,
+			sent_at: new Date(),
+			username: currentUsername
+		});
+		message = '';
+		console.log('sent');
+	}
 </script>
 
 <div
-	class="w-full gap-2 not-md:flex-col md:flex md:items-start md:justify-around"
+	class="flex w-full flex-col flex-wrap items-center justify-center gap-2 sm:flex-row md:items-center"
 	id="main-container"
 >
-	<div id="players">
-		<Card.Root>
-			<Card.Content>
-				<ScrollArea class="h-[20vh] lg:h-[40vh]">
-					<ul>
-						<li class="flex justify-between rounded-md border px-3">
-							<span> Me:</span> <span> {currentUsername}</span>
-						</li>
-						<li class="flex justify-between rounded-md border px-3">
-							<span>Room Code: </span><span>{data.room_code}</span>
-						</li>
-						{#each players as player, index (index)}
-							<li class={'my-1 ' + player.active ? 'scale-110 underline' : ''}>
-								{player.username}
-							</li>
+	<div>
+		<div id="players">
+			<Card.Root>
+				<Card.Content>
+					<Players list={players} />
+				</Card.Content>
+				<Card.Footer>
+					<ButtonGroup.Root
+						onclick={async () => {
+							toast.info('copied invite link');
+							await navigator.clipboard.writeText(
+								`${window.location.protocol}//${window.location.host}/invite/${data.room_code}`
+							);
+						}}
+					>
+						<Button variant="outline" size="sm"
+							>{`${window.location.protocol}//${window.location.host}/invite/${data.room_code}`}</Button
+						>
+						<Button variant="outline" size="sm"><Clipboard /></Button>
+					</ButtonGroup.Root>
+				</Card.Footer>
+			</Card.Root>
+		</div>
 
-							<Separator />
-						{/each}
-					</ul>
-				</ScrollArea>
-			</Card.Content>
-		</Card.Root>
-	</div>
-	<div id="canvas">
-		<div class={players.length <= 1 ? 'relative cursor-not-allowed border opacity-75' : ''}>
-			{#if players.length <= 1}
-				<div class="absolute h-full w-full border border-white bg-primary-foreground">
-					<div class="pointer-events-none z-10 flex h-full w-full items-center justify-center">
-						Waiting for other players to join....
-					</div>
-				</div>
-			{/if}
-			{#if isPlayerActive && players.length > 1}
-				<DrawingCanvas />
-			{:else}
-				<ViewCanvas />
-			{/if}
+		<div id="chat">
+			<Card.Root>
+				<Card.Content>
+					<ScrollArea class="h-[20vh] sm:h-[30vh]">
+						<ul>
+							{#each chats as chat, index (index)}
+								<li class="my-1">
+									<span class="text-xs">{chat.username}: </span>
+									<span>{chat.message}</span>
+								</li>
+								<Separator />
+							{/each}
+						</ul>
+					</ScrollArea>
+				</Card.Content>
+
+				<Card.Footer>
+					<InputGroup.Root>
+						<InputGroup.Input
+							placeholder="type your guess"
+							bind:value={message}
+							onkeydown={(e) => {
+								if (event.key === 'Enter') sendMessageHandler();
+							}}
+						/>
+						<InputGroup.Addon align="inline-end">
+							<InputGroup.Button
+								variant="secondary"
+								onclick={() => {
+									sendMessage(socket, currentUsername, message);
+									chats.push({
+										id: parseInt(Math.random() * 100),
+										message,
+										sent_at: new Date(),
+										username: currentUsername
+									});
+									message = '';
+									console.log('sent');
+								}}><SendHorizontal /></InputGroup.Button
+							>
+						</InputGroup.Addon>
+					</InputGroup.Root>
+				</Card.Footer>
+			</Card.Root>
 		</div>
 	</div>
-	<div id="chat">
-		<Card.Root>
-			<Card.Header class="text-xl font-bold ">
-				<div>Guesses</div>
-			</Card.Header>
-			<Card.Content>
-				<ScrollArea class="h-[24vh] lg:h-[40vh]">
-					<ul>
-						{#each chats as chat, index (index)}
-							<li class="my-1">
-								<span class="text-xs">{chat.username}: </span>
-								<span>{chat.message}</span>
-							</li>
-							<Separator />
-						{/each}
-					</ul>
-				</ScrollArea>
-			</Card.Content>
-
-			<Card.Footer>
-				<InputGroup.Root>
-					<InputGroup.Input placeholder="type your guess" bind:value={message} />
-					<InputGroup.Addon align="inline-end">
-						<InputGroup.Button
-							variant="secondary"
-							onclick={() => {
-								sendMessage(socket, currentUsername, message);
-								chats.push({
-									id: parseInt(Math.random() * 100),
-									message,
-									sent_at: new Date(),
-									username: currentUsername
-								});
-								message = '';
-								console.log('sent');
-							}}><SendHorizontal /></InputGroup.Button
-						>
-					</InputGroup.Addon>
-				</InputGroup.Root>
-			</Card.Footer>
-		</Card.Root>
+	<div id="canvas">
+		{#if players.length <= 1}
+			<div class="">Waiting for other players to join....</div>
+		{/if}
+		{#if isPlayerActive && players.length > 1}
+			<DrawingCanvas />
+		{:else}
+			<ViewCanvas />
+		{/if}
 	</div>
 </div>

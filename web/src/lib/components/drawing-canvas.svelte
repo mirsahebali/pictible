@@ -1,3 +1,17 @@
+<script module lang="ts">
+	function setCanvasWidth() {
+		const width = window.innerWidth;
+
+		if (width <= 768) {
+			return window.innerWidth - window.innerWidth * 0.2;
+		} else if (width <= 1024) {
+			return window.innerWidth - window.innerWidth * 0.35;
+		} else {
+			return window.innerWidth / 2;
+		}
+	}
+</script>
+
 <script lang="ts">
 	import { Slider } from '$lib/components/ui/slider';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group';
@@ -14,35 +28,28 @@
 	let canvas = $state<HTMLCanvasElement | null>(null);
 	let ctx = $state<CanvasRenderingContext2D>();
 
-	let mousePos = $state({ x: 0, y: 0 });
-	let offset = $state({ x: 0, y: 0 });
-	let pos = $derived({ x: mousePos.x - offset.x, y: mousePos.y - offset.y });
-
 	let insideCanvas = $state(false);
 	let mouseDown = $state(false);
 
 	let canvasSelectMode = $state(CanvasModes.Drawing);
 	let prevCanvasMode = $state(CanvasModes.Drawing);
-	let canvasPos = $derived(canvas?.getBoundingClientRect());
+	let canvasPos = $state({ x: 0, y: 0 });
+	let mousePos = $state({ x: 0, y: 0 });
+	let pos = $state({ x: 0, y: 0 });
 
 	onMount(() => {
 		if (!canvas) return;
 
 		ctx = canvas.getContext('2d');
 
-		canvas.width = !isMobile()
-			? window.innerWidth / 2
-			: window.innerWidth - window.innerWidth * 0.2;
+		canvas.width = setCanvasWidth();
 		canvas.height = (canvas.width * 9) / 16;
 		drawData.canvasWidth = canvas.width;
 		drawData.canvasHeight = canvas.height;
 
-		canvasPos = canvas.getBoundingClientRect();
-
-		offset.x = canvasPos.left;
-		offset.y = canvasPos.top;
-
 		canvas.addEventListener('mouseover', (e) => {
+			canvasPos.x = canvas.getBoundingClientRect().x;
+			canvasPos.y = canvas.getBoundingClientRect().y;
 			insideCanvas = true;
 		});
 
@@ -70,8 +77,12 @@
 		canvas.height = (canvas.width * 9) / 16;
 		drawData.canvasWidth = canvas.width;
 		drawData.canvasHeight = canvas.height;
+	});
 
-		canvasPos = canvas.getBoundingClientRect();
+	$effect(() => {
+		pos.x = mousePos.x - canvasPos.x;
+		pos.y = mousePos.y - canvasPos.y;
+		$inspect('Pos', pos);
 	});
 
 	$effect(() => {
@@ -116,7 +127,7 @@
 	});
 </script>
 
-<canvas bind:this={canvas} class="rounded-xl border bg-white"></canvas>
+<canvas bind:this={canvas} class="w-full cursor-crosshair rounded-xl border bg-white"></canvas>
 <div id="toolbar" class="mt-5 flex items-center justify-between gap-10 rounded-2xl border p-4">
 	<Button
 		onclick={() => {
@@ -129,12 +140,12 @@
 		<div class="rounded-full border-2">
 			<ColorPicker bind:hex={drawData.hex} />
 		</div>
-		<Slider type="single" bind:value={drawData.drawStrokeWidth} max={100} step={2} />
+		<Slider type="single" bind:value={drawData.drawStrokeWidth} class="w-50" max={100} step={2} />
 	{/if}
 	<br />
 
 	{#if canvasSelectMode === CanvasModes.Erasing}
-		<Slider type="single" bind:value={drawData.eraseStrokeWidth} max={100} step={2} />
+		<Slider type="single" bind:value={drawData.eraseStrokeWidth} class="w-50" max={100} step={2} />
 	{/if}
 
 	<ToggleGroup.Root type="single" bind:value={canvasSelectMode}>

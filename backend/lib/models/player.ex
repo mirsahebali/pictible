@@ -17,6 +17,7 @@ defmodule Pictible.Models.Player do
     player 
     |> cast(params, [:username, :active])
     |> validate_required([:username, :active])
+    |> foreign_key_constraint(:room_id)
   end
 
   @spec to_map(map()) :: map()

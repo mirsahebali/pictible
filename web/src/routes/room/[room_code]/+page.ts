@@ -4,6 +4,7 @@ import { getRoomData, getChatData } from '$lib/requests';
 import { isDev } from '$lib/utils';
 
 export const prerender = true;
+export const ssr = false;
 
 export const load: PageLoad = async ({ params }) => {
 	const roomData = await getRoomData(params.room_code);

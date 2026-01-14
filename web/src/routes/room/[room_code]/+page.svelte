@@ -195,9 +195,19 @@
 	class="flex w-full flex-col flex-wrap items-center justify-center gap-2 sm:flex-row md:items-center"
 	id="main-container"
 >
-	<div>
+	<div id="canvas">
+		{#if players.length <= 1}
+			<div class="">Waiting for other players to join....</div>
+		{/if}
+		{#if isPlayerActive && players.length > 1}
+			<DrawingCanvas />
+		{:else}
+			<ViewCanvas />
+		{/if}
+	</div>
+	<div id="info">
 		<div id="players">
-			<Card.Root>
+			<Card.Root class="bg-primary-foreground">
 				<Card.Content>
 					<Players list={players} />
 				</Card.Content>
@@ -220,7 +230,7 @@
 		</div>
 
 		<div id="chat">
-			<Card.Root>
+			<Card.Root class="bg-accent">
 				<Card.Content>
 					<ScrollArea class="h-[20vh] sm:h-[30vh]">
 						<ul>
@@ -264,15 +274,5 @@
 				</Card.Footer>
 			</Card.Root>
 		</div>
-	</div>
-	<div id="canvas">
-		{#if players.length <= 1}
-			<div class="">Waiting for other players to join....</div>
-		{/if}
-		{#if isPlayerActive && players.length > 1}
-			<DrawingCanvas />
-		{:else}
-			<ViewCanvas />
-		{/if}
 	</div>
 </div>

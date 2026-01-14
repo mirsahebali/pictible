@@ -12,7 +12,10 @@ defmodule Pictible.Application do
       {Bandit, plug: Pictible.Router, scheme: :http, port: 4069},
       Pictible.Repo,
       {Registry, keys: :duplicate, name: Pictible.WSRegistry},
-      {Pictible.EventAgent, %{}}
+      {Pictible.EventAgent, %{}},
+      {Ecto.Migrator,
+       repos: Application.fetch_env!(:pictible, :ecto_repos),
+       skip: System.get_env("SKIP_MIGRATIONS") == "true"}
     ]
 
     opts = [strategy: :one_for_one, name: Pictible.Supervisor]

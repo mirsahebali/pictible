@@ -1,0 +1,15 @@
+backend/_build
+backend/deps
+backend/.elixir_ls
+backend/.hex
+backend/.mix
+backend/cover
+backend/doc
+backend/pictible*db
+backend/.watchman*
+backend/priv/static
+
+web/node_modules
+web/.svelte-kit
+web/build
+web/.watchman*
